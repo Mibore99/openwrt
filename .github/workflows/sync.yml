@@ -1,0 +1,23 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch: # on button click
+
+jobs:
+  sync:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: tgymnich/fork-sync@v1.8
+        with:
+          owner: openwrt
+          base: openwrt-22.03
+          head: openwrt-22.03	  
+  
+      - uses: GitRML/delete-workflow-runs@main
+        with:
+          retain_days: 2
+          keep_minimum_runs: 1
