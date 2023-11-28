@@ -14,8 +14,8 @@ jobs:
       - uses: tgymnich/fork-sync@v1.8
         with:
           owner: openwrt
-          base: openwrt-22.03
-          head: openwrt-22.03	  
+          base: openwrt-23.05
+          head: openwrt-23.05	  
   
       - uses: GitRML/delete-workflow-runs@main
         with:
