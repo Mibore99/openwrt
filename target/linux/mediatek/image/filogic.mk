@@ -90,6 +90,21 @@ define Build/zyxel-nwa-fit-filogic
 	@mv $@.new $@
 endef
 
+define Build/cetron-header
+	$(eval magic=$(word 1,$(1)))
+	$(eval model=$(word 2,$(1)))
+	( \
+		dd if=/dev/zero bs=856 count=1 2>/dev/null; \
+		printf "$(model)," | dd bs=128 count=1 conv=sync 2>/dev/null; \
+		md5sum $@ | cut -f1 -d" " | dd bs=32 count=1 2>/dev/null; \
+		printf "$(magic)" | dd bs=4 count=1 conv=sync 2>/dev/null; \
+		cat $@; \
+	) > $@.tmp
+	fw_crc=$$(gzip -c $@.tmp | tail -c 8 | od -An -N4 -tx4 --endian little | tr -d ' \n'); \
+	printf "$$(echo $$fw_crc | sed 's/../\\x&/g')" | cat - $@.tmp > $@
+	rm $@.tmp
+endef
+
 define Device/asus_tuf-ax4200
   DEVICE_VENDOR := ASUS
   DEVICE_MODEL := TUF-AX4200
@@ -174,6 +189,23 @@ endif
 endef
 TARGET_DEVICES += bananapi_bpi-r3
 
+define Device/cetron_ct3003
+  DEVICE_VENDOR := Cetron
+  DEVICE_MODEL := CT3003
+  DEVICE_DTS := mt7981b-cetron-ct3003
+  DEVICE_DTS_DIR := ../dts
+  SUPPORTED_DEVICES += mediatek,mt7981-spim-snand-rfb
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  KERNEL_IN_UBI := 1
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+  IMAGES += factory.bin
+  IMAGE/factory.bin := $$(IMAGE/sysupgrade.bin) | cetron-header rd30 CT3003
+endef
+TARGET_DEVICES += cetron_ct3003
+
 define Device/cmcc_rax3000m
   DEVICE_VENDOR := CMCC
   DEVICE_MODEL := RAX3000M
@@ -241,6 +273,21 @@ define Device/glinet_gl-mt3000
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-gl-metadata
 endef
 TARGET_DEVICES += glinet_gl-mt3000
+
+define Device/glinet_gl-mt6000
+  DEVICE_VENDOR := GL.iNet
+  DEVICE_MODEL := GL-MT6000
+  DEVICE_DTS := mt7986a-glinet-gl-mt6000
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES := e2fsprogs f2fsck mkf2fs kmod-usb3 kmod-mt7986-firmware mt7986-wo-firmware
+  IMAGES += factory.bin
+  IMAGE/factory.bin := append-kernel | pad-to 32M | append-rootfs
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-gl-metadata
+  ARTIFACTS := preloader.bin bl31-uboot.fip
+  ARTIFACT/preloader.bin := mt7986-bl2 emmc-ddr4
+  ARTIFACT/bl31-uboot.fip := mt7986-bl31-uboot glinet_gl-mt6000
+endef
+TARGET_DEVICES += glinet_gl-mt6000
 
 define Device/h3c_magic-nx30-pro
   DEVICE_VENDOR := H3C
@@ -524,6 +571,16 @@ define Device/tplink_tl-xdr6088
 endef
 TARGET_DEVICES += tplink_tl-xdr6088
 
+define Device/ubnt_unifi-6-plus
+  DEVICE_VENDOR := Ubiquiti
+  DEVICE_MODEL := UniFi 6 Plus
+  DEVICE_DTS := mt7981a-ubnt-unifi-6-plus
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES := kmod-mt7981-firmware mt7981-wo-firmware e2fsprogs f2fsck mkf2fs fdisk partx-utils
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += ubnt_unifi-6-plus
+
 define Device/xiaomi_mi-router-wr30u-112m-nmbm
   DEVICE_VENDOR := Xiaomi
   DEVICE_MODEL := Mi Router WR30U (112M UBI with NMBM-Enabled layout)
@@ -652,6 +709,20 @@ define Device/zyxel_ex5601-t0-stock
 	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd
 endef
 TARGET_DEVICES += zyxel_ex5601-t0-stock
+
+define Device/zyxel_ex5700-telenor
+  DEVICE_VENDOR := ZyXEL
+  DEVICE_MODEL := EX5700 (Telenor)
+  DEVICE_DTS := mt7986a-zyxel-ex5700-telenor
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_PACKAGES := kmod-mt7916-firmware kmod-ubootenv-nvram kmod-usb3 kmod-mt7986-firmware mt7986-wo-firmware
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  IMAGE_SIZE := 65536k
+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
+endef
+TARGET_DEVICES += zyxel_ex5700-telenor
 
 define Device/zyxel_nwa50ax-pro
   DEVICE_VENDOR := ZyXEL
